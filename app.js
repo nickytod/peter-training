@@ -20,6 +20,7 @@ const S = {
   guidedIdx:  0,       // current exercise index in guided mode
   guidedSet:  0,       // current set index in guided mode
   guidedSuperset: 0,   // 0=first exercise, 1=partner in superset
+  scheduleSelected: null, // selected day index in schedule view
 };
 
 // ---- LocalStorage Keys ----
@@ -714,12 +715,17 @@ function renderUpcomingSchedule() {
     days.push({ dateStr, type, isToday, dayName, dayNum });
   }
   
+  const selected = S.scheduleSelected !== undefined ? S.scheduleSelected : null;
+  const selDay = selected !== null ? days[selected] : null;
+  const selWorkout = selDay && selDay.type !== 'rest' ? S.program.workouts[selDay.type] : null;
+  
   return `
     <div class="schedule-section">
       <div class="schedule-title">Upcoming Week</div>
       <div class="schedule-grid">
-        ${days.map(d => `
-          <div class="schedule-day ${d.isToday ? 'today' : ''} ${d.type === 'rest' ? 'rest' : ''}">
+        ${days.map((d, i) => `
+          <div class="schedule-day ${d.isToday ? 'today' : ''} ${d.type === 'rest' ? 'rest' : ''} ${selected === i ? 'selected' : ''}"
+               onclick="selectScheduleDay(${i})">
             <div class="schedule-day-name">${d.dayName}</div>
             <div class="schedule-day-num">${d.dayNum}</div>
             <div class="schedule-day-icon">${icons[d.type]}</div>
@@ -727,7 +733,35 @@ function renderUpcomingSchedule() {
           </div>
         `).join('')}
       </div>
+      ${selDay ? `
+        <div class="schedule-detail">
+          <div class="schedule-detail-header">
+            <span>${icons[selDay.type]}</span>
+            <strong>${names[selDay.type]}</strong>
+            <span class="schedule-detail-date">${fmtDateShort(selDay.dateStr)}</span>
+          </div>
+          ${selWorkout ? `
+            <div class="schedule-detail-exercises">
+              ${selWorkout.exercises.map(ex => `
+                <div class="schedule-ex-row">
+                  <span class="schedule-ex-name">${escHtml(ex.name)}</span>
+                  <span class="schedule-ex-meta">${ex.sets}×${repsDisplay(ex)} ${isBW(ex) ? 'BW' : ex.startWeight + 'kg'}</span>
+                </div>
+              `).join('')}
+            </div>` : `
+            <div class="schedule-detail-rest">Recovery day — sleep, protein, light movement</div>`}
+        </div>` : ''}
     </div>`;
+}
+
+function selectScheduleDay(idx) {
+  S.scheduleSelected = S.scheduleSelected === idx ? null : idx;
+  render();
+  // Scroll to detail
+  requestAnimationFrame(() => {
+    const el = document.querySelector('.schedule-detail');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
 }
 
 // ---- Warmup ----
