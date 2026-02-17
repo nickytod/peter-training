@@ -21,6 +21,8 @@ const S = {
   guidedSet:  0,       // current set index in guided mode
   guidedSuperset: 0,   // 0=first exercise, 1=partner in superset
   scheduleSelected: null, // selected day index in schedule view
+  calMonth: undefined,    // calendar month (0-11)
+  calYear:  undefined,    // calendar year
 };
 
 // ---- LocalStorage Keys ----
@@ -1418,62 +1420,146 @@ function enterGuided() {
 // ============================================================
 function renderHistory() {
   const app = document.getElementById('app');
-  const filters = ['all', 'push', 'pull', 'legs'];
-  const list  = [...S.logs].reverse()
-    .filter(l => S.histFilter === 'all' || l.type === S.histFilter);
-
-  // Group by date
-  const byDate = {};
-  for (const log of list) {
-    if (!byDate[log.date]) byDate[log.date] = [];
-    byDate[log.date].push(log);
+  
+  // Build calendar data for current month
+  const now = new Date();
+  const calMonth = S.calMonth !== undefined ? S.calMonth : now.getMonth();
+  const calYear = S.calYear !== undefined ? S.calYear : now.getFullYear();
+  const monthName = new Date(calYear, calMonth, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+  
+  // Build log lookup by date
+  const logsByDate = {};
+  for (const log of S.logs) {
+    if (!logsByDate[log.date]) logsByDate[log.date] = [];
+    logsByDate[log.date].push(log);
   }
-
+  
+  // Calendar grid
+  const firstDay = new Date(calYear, calMonth, 1);
+  const startDow = (firstDay.getDay() + 6) % 7; // Mon=0
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const todayDate = todayStr();
+  
+  const calCells = [];
+  for (let i = 0; i < startDow; i++) calCells.push(null); // leading blanks
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${pad(calMonth + 1)}-${pad(d)}`;
+    const dayLogs = logsByDate[dateStr] || [];
+    const totalMin = dayLogs.reduce((sum, l) => {
+      if (l.startTime && l.endTime) return sum + Math.round((new Date(l.endTime) - new Date(l.startTime)) / 60000);
+      return sum;
+    }, 0);
+    const isToday = dateStr === todayDate;
+    calCells.push({ day: d, dateStr, logs: dayLogs, totalMin, isToday });
+  }
+  
+  // Past workouts list (reverse chronological)
+  const pastList = [...S.logs].reverse();
+  
   app.innerHTML = `
-    <div class="page-header">
-      <h1>History</h1>
-      <p class="subtitle">${S.logs.length} session${S.logs.length !== 1 ? 's' : ''} logged</p>
-      <div class="filter-bar">
-        ${filters.map(f => `
-          <button class="filter-chip ${S.histFilter === f ? 'active' : ''}"
-                  onclick="setHistFilter('${f}')">
-            ${f === 'all' ? 'All' : f[0].toUpperCase() + f.slice(1)}
-          </button>`).join('')}
+    <div class="page-header" style="padding-bottom:8px;">
+      <h1>Log</h1>
+    </div>
+    
+    <!-- Calendar -->
+    <div class="cal-section">
+      <div class="cal-header">
+        <span class="cal-title">Calendar</span>
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="calPrev()">‹</button>
+          <span class="cal-month">${monthName}</span>
+          <button class="cal-nav-btn" onclick="calNext()">›</button>
+        </div>
+      </div>
+      <div class="cal-grid">
+        <div class="cal-dow">Mo</div><div class="cal-dow">Tu</div><div class="cal-dow">We</div>
+        <div class="cal-dow">Th</div><div class="cal-dow">Fr</div><div class="cal-dow">Sa</div><div class="cal-dow">Su</div>
+        ${calCells.map(cell => {
+          if (!cell) return '<div class="cal-cell empty"></div>';
+          const hasWorkout = cell.logs.length > 0;
+          return `
+            <div class="cal-cell ${hasWorkout ? 'worked' : ''} ${cell.isToday ? 'today' : ''}">
+              <span class="cal-day-num">${cell.day}</span>
+              ${hasWorkout ? `<span class="cal-duration">${cell.totalMin}m</span>` : ''}
+            </div>`;
+        }).join('')}
       </div>
     </div>
-    <div class="history-list">
-      ${Object.keys(byDate).length === 0
+    
+    <!-- Past Workouts -->
+    <div class="past-section">
+      <div class="past-header">
+        <span class="past-title">Past Workouts</span>
+      </div>
+      ${pastList.length === 0
         ? `<div class="empty-state">
              <span class="empty-icon">📋</span>
              No workouts yet. Complete your first session!
            </div>`
-        : Object.entries(byDate).map(([date, logs]) => `
-            <div class="history-date-group">
-              <div class="history-date-label">${fmtDateShort(date)}</div>
-              ${logs.map(log => renderHistEntry(log)).join('')}
-            </div>`).join('')
+        : pastList.map(log => renderHistEntry(log)).join('')
       }
     </div>`;
+}
+
+function calPrev() {
+  if (S.calMonth === undefined) { const n = new Date(); S.calMonth = n.getMonth(); S.calYear = n.getFullYear(); }
+  S.calMonth--;
+  if (S.calMonth < 0) { S.calMonth = 11; S.calYear--; }
+  render();
+}
+function calNext() {
+  if (S.calMonth === undefined) { const n = new Date(); S.calMonth = n.getMonth(); S.calYear = n.getFullYear(); }
+  S.calMonth++;
+  if (S.calMonth > 11) { S.calMonth = 0; S.calYear++; }
+  render();
 }
 
 function renderHistEntry(log) {
   const isExp    = S.expandedLog === log.id;
   const vol      = calcVolume(log);
   const sets     = calcTotalSets(log);
-  const typeIcon = { push: '💪', pull: '🦾', legs: '🦵' }[log.type] || '🏋️';
+  const typeIcon = { push: '💪', pull: '🦾', legs: '🦵', 'run-z2': '🏃', 'run-intervals': '⚡' }[log.type] || '🏋️';
   const dur      = log.endTime ? fmtDuration(log.startTime, log.endTime) : '—';
-  const typeName = (S.program.workouts[log.type]?.name) || log.type;
+  const typeName = log.kind === 'run' 
+    ? (log.runType === 'intervals' ? 'Interval Run' : 'Zone 2 Run')
+    : (S.program.workouts[log.type]?.name) || log.type;
+  const isRun = log.kind === 'run';
+  
+  // Date label
+  const logDate = log.date === todayStr() ? 'TODAY' : fmtDateShort(log.date).toUpperCase();
 
   return `
-    <div class="history-entry" onclick="toggleHistEntry('${log.id}')">
-      <div class="history-entry-header">
-        <span class="history-type">${typeIcon} ${typeName}</span>
-        <span class="history-duration">${dur}</span>
+    <div class="hist-card" onclick="toggleHistEntry('${log.id}')">
+      <div class="hist-card-date">
+        <span class="hist-date-dot ${isRun ? 'run' : ''}"></span>
+        <span>${logDate}</span>
+        <span class="hist-card-dur">${dur}</span>
       </div>
-      <div class="history-stats">
-        <span class="history-stat"><strong>${sets}</strong> sets</span>
-        ${vol > 0 ? `<span class="history-stat"><strong>${vol.toLocaleString()}</strong> kg vol</span>` : ''}
-        ${log.startTime ? `<span class="history-stat">${fmtTime(log.startTime)}</span>` : ''}
+      <div class="hist-card-body">
+        <div class="hist-card-title">
+          <span class="hist-card-icon">${typeIcon}</span>
+          <span>${escHtml(typeName)}</span>
+        </div>
+        <div class="hist-card-stats">
+          ${!isRun ? `
+            <div class="hist-stat">
+              <div class="hist-stat-val">${sets}</div>
+              <div class="hist-stat-label">SETS</div>
+            </div>
+            ${vol > 0 ? `
+            <div class="hist-stat">
+              <div class="hist-stat-val">${(vol/1000).toFixed(1)}t</div>
+              <div class="hist-stat-label">VOLUME</div>
+            </div>` : ''}
+            <div class="hist-stat">
+              <div class="hist-stat-val">${(log.exercises || []).filter(e => e.sets?.some(s => s.completed)).length}</div>
+              <div class="hist-stat-label">EXERCISES</div>
+            </div>` : `
+            <div class="hist-stat">
+              <div class="hist-stat-val">${log.runType === 'z2' ? 'Zone 2' : 'Intervals'}</div>
+              <div class="hist-stat-label">TYPE</div>
+            </div>`}
+        </div>
       </div>
       ${isExp ? renderHistDetail(log) : ''}
     </div>`;

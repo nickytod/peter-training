@@ -870,6 +870,174 @@ body {
 .history-ex-name { color: var(--text); font-weight: 500; }
 .history-ex-sets { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
 
+/* ---- Calendar (Fitbod-style) ---- */
+.cal-section {
+  padding: 0 16px;
+  margin-bottom: 24px;
+}
+.cal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.cal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cal-nav-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 22px;
+  cursor: pointer;
+  padding: 4px 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+.cal-month {
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: 600;
+  min-width: 100px;
+  text-align: center;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.cal-dow {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 4px 0 8px;
+  text-transform: uppercase;
+}
+.cal-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 2px;
+  min-height: 44px;
+  border-radius: 6px;
+}
+.cal-cell.empty { min-height: 0; }
+.cal-day-num {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.cal-cell.worked .cal-day-num {
+  color: var(--text);
+}
+.cal-cell.today {
+  position: relative;
+}
+.cal-cell.today .cal-day-num {
+  width: 28px;
+  height: 28px;
+  line-height: 28px;
+  text-align: center;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 50%;
+}
+.cal-duration {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--success);
+  margin-top: 1px;
+}
+
+/* ---- Past Workouts ---- */
+.past-section {
+  padding: 0 16px;
+}
+.past-header {
+  margin-bottom: 12px;
+}
+.past-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Workout cards */
+.hist-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+.hist-card:active { border-color: var(--accent); }
+.hist-card-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.3px;
+}
+.hist-date-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+.hist-date-dot.run { background: var(--success); }
+.hist-card-dur {
+  margin-left: auto;
+  color: var(--text-muted);
+}
+.hist-card-body {
+  padding: 8px 14px 12px;
+}
+.hist-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.hist-card-icon { font-size: 18px; }
+.hist-card-stats {
+  display: flex;
+  gap: 0;
+}
+.hist-stat {
+  flex: 1;
+  text-align: center;
+  padding: 0 8px;
+  border-right: 1px solid var(--border);
+}
+.hist-stat:last-child { border-right: none; }
+.hist-stat-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.hist-stat-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
 /* ---- Stats View ---- */
 .stats-content { padding: 0 16px 16px; }
 
