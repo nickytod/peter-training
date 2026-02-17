@@ -1070,3 +1070,195 @@ input[type="number"] {
 
 /* Remove number input arrows in Firefox */
 input[type="number"] { -moz-appearance: textfield; }
+
+/* ============================================================
+   GUIDED WORKOUT MODE
+   ============================================================ */
+
+.guided-container {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 60px);
+  padding: 16px 16px 24px;
+}
+
+/* Progress dots */
+.guided-progress {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.guided-progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.guided-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border-light);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.guided-dot.current {
+  background: var(--accent);
+  width: 24px;
+  border-radius: 5px;
+}
+.guided-dot.done { background: var(--success); }
+.guided-dot.past { background: rgba(48,209,88,0.4); }
+.guided-progress-text {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Exercise header */
+.guided-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.guided-superset-badge {
+  display: inline-block;
+  background: rgba(255,204,0,0.15);
+  color: #ffcc00;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+.guided-exercise-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+.guided-meta {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.guided-notes {
+  font-size: 13px;
+  color: var(--text-muted);
+  background: var(--bg-card-2);
+  border-left: 3px solid var(--accent);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 8px auto;
+  max-width: 320px;
+  text-align: left;
+}
+.guided-last {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+
+/* Sets in guided mode */
+.guided-sets {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.guided-set-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 1fr 28px;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 8px;
+  background: var(--bg-card-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+.guided-set-row.current {
+  border-color: var(--accent);
+  background: rgba(74,144,217,0.08);
+}
+.guided-set-row.completed {
+  opacity: 0.5;
+  background: rgba(48,209,88,0.06);
+  border-color: rgba(48,209,88,0.15);
+}
+.guided-set-row.upcoming {
+  opacity: 0.4;
+}
+.guided-set-row .input-unit { display: none; }
+.guided-set-row .pr-badge { display: none; }
+.guided-set-row .input-group { min-width: 0; }
+.guided-set-row .set-input { font-size: 14px; }
+
+.guided-set-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+.guided-check {
+  color: var(--success);
+  font-weight: 700;
+  font-size: 16px;
+}
+.guided-arrow {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+/* RPE in guided */
+.guided-rpe {
+  text-align: center;
+  padding: 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+
+/* Done message */
+.guided-done-msg {
+  text-align: center;
+  font-size: 16px;
+  color: var(--success);
+  font-weight: 600;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+/* Bottom actions */
+.guided-actions {
+  margin-top: auto;
+  padding-top: 16px;
+}
+.guided-complete-btn {
+  width: 100%;
+  padding: 16px !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  border-radius: 14px !important;
+  margin-bottom: 12px;
+}
+.guided-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.guided-nav-btn {
+  flex: 1;
+  padding: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.guided-nav-btn:active { background: var(--bg-card-2); }
+.guided-nav-btn:disabled { opacity: 0.3; }

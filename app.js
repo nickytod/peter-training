@@ -16,6 +16,10 @@ const S = {
   histFilter: 'all',
   statsEx:    null,    // selected exercise id in stats view
   expandedLog: null,   // expanded history entry id
+  guided:     false,   // guided workout mode active
+  guidedIdx:  0,       // current exercise index in guided mode
+  guidedSet:  0,       // current set index in guided mode
+  guidedSuperset: 0,   // 0=first exercise, 1=partner in superset
 };
 
 // ---- LocalStorage Keys ----
@@ -255,6 +259,10 @@ function startWorkout(type) {
 
   saveCurrent();
   S.expanded = workout.exercises[0]?.id || null;
+  S.guided = true;
+  S.guidedIdx = 0;
+  S.guidedSet = 0;
+  S.guidedSuperset = 0;
   render();
 }
 
@@ -599,7 +607,13 @@ function renderToday() {
   const isActive = S.current && S.current.type === type && S.current.date === todayStr();
 
   if (!isActive) {
+    S.guided = false;
     app.innerHTML = renderStartScreen(type, workout);
+    return;
+  }
+
+  if (S.guided) {
+    app.innerHTML = renderGuidedMode(type, workout);
     return;
   }
 
@@ -626,6 +640,9 @@ function renderToday() {
       ${renderWarmupCard(workout.warmup)}
       ${groups.map(g => renderGroup(g)).join('')}
       <div class="finish-section">
+        <button class="btn btn-primary" onclick="enterGuided()" style="margin-bottom:8px;">
+          ▶ Resume Guided Mode
+        </button>
         <button class="btn btn-success" onclick="finishWorkout()">
           🏁 Finish Workout
         </button>
@@ -897,6 +914,311 @@ function toggleEx(exId) {
       if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
+}
+
+// ============================================================
+//  GUIDED WORKOUT MODE
+// ============================================================
+function getGuidedExerciseList(workout) {
+  // Flatten exercises, grouping supersets as pairs
+  const list = [];
+  const seen = new Set();
+  for (const ex of workout.exercises) {
+    if (seen.has(ex.id)) continue;
+    if (ex.supersetWith) {
+      const partner = workout.exercises.find(e => e.id === ex.supersetWith);
+      if (partner && !seen.has(partner.id)) {
+        list.push({ type: 'superset', exercises: [ex, partner] });
+        seen.add(ex.id);
+        seen.add(partner.id);
+        continue;
+      }
+    }
+    list.push({ type: 'single', exercises: [ex] });
+    seen.add(ex.id);
+  }
+  return list;
+}
+
+function renderGuidedMode(type, workout) {
+  const exList = getGuidedExerciseList(workout);
+  const total = exList.length;
+  const idx = Math.min(S.guidedIdx, total - 1);
+  const group = exList[idx];
+  
+  // Determine current exercise
+  const isSuperset = group.type === 'superset';
+  const curExIdx = isSuperset ? S.guidedSuperset : 0;
+  const ex = group.exercises[curExIdx];
+  const exData = getExData(ex.id);
+  
+  // Calculate overall progress
+  const { done: exDone, total: exTotal } = getProgress();
+  
+  // Current set info
+  const completedSets = exData ? exData.sets.filter(s => s.completed).length : 0;
+  const totalSets = ex.sets;
+  const currentSetIdx = Math.min(completedSets, totalSets - 1);
+  const allSetsDone = completedSets >= totalSets;
+  
+  // Check if this exercise group is fully done
+  const groupDone = group.exercises.every(e => {
+    const d = getExData(e.id);
+    return d && d.sets.every(s => s.completed);
+  });
+  
+  // Last workout data
+  const lastEx = lastExData(ex.id);
+  const lastSets = lastEx?.sets?.filter(s => s.completed) || [];
+  const lastText = lastSets.length
+    ? lastSets.map(s => isBW(ex) ? `${s.reps}` : `${s.weight}×${s.reps}`).join(', ')
+    : null;
+    
+  // Show RPE prompt?
+  const showRPE = ex.isCompound && allSetsDone && exData && exData.rpe === null;
+
+  return `
+    <div class="guided-container">
+      <!-- Progress bar -->
+      <div class="guided-progress">
+        <div class="guided-progress-dots">
+          ${exList.map((g, i) => {
+            const gDone = g.exercises.every(e => {
+              const d = getExData(e.id);
+              return d && d.sets.every(s => s.completed);
+            });
+            return `<div class="guided-dot ${i === idx ? 'current' : ''} ${gDone ? 'done' : ''} ${i < idx ? 'past' : ''}" 
+                         onclick="guidedGoTo(${i})"></div>`;
+          }).join('')}
+        </div>
+        <div class="guided-progress-text">Exercise ${idx + 1} of ${total}</div>
+      </div>
+
+      <!-- Exercise header -->
+      <div class="guided-header">
+        ${isSuperset ? `<div class="guided-superset-badge">⚡ SUPERSET ${curExIdx + 1}/2</div>` : ''}
+        <h2 class="guided-exercise-name">${escHtml(ex.name)}</h2>
+        <div class="guided-meta">
+          <span class="meta-pill accent">${ex.sets} × ${repsDisplay(ex)}</span>
+          ${!isBW(ex) ? `<span class="meta-pill">${exData?.sets?.[0]?.weight || ex.startWeight}kg</span>` : `<span class="meta-pill">BW</span>`}
+          ${ex.isCompound ? '<span class="meta-pill accent">Compound</span>' : ''}
+        </div>
+        ${ex.notes ? `<div class="guided-notes">${escHtml(ex.notes)}</div>` : ''}
+        ${lastText ? `<div class="guided-last">Last: ${escHtml(lastText)}</div>` : ''}
+      </div>
+
+      <!-- Sets -->
+      <div class="guided-sets">
+        ${exData ? exData.sets.map((set, i) => renderGuidedSetRow(ex, set, i, currentSetIdx, allSetsDone)).join('') : ''}
+      </div>
+
+      ${showRPE ? `
+        <div class="guided-rpe">
+          <div class="rpe-label">How hard was that?</div>
+          <div class="rpe-buttons">
+            ${[6,7,8,9,10].map(r => `
+              <button class="rpe-btn rpe-${r}" onclick="guidedLogRPE('${ex.id}',${r})">${r}</button>`).join('')}
+          </div>
+          <div class="rpe-scale"><span>Light</span><span>Max</span></div>
+        </div>` : ''}
+
+      ${groupDone && !showRPE ? `
+        <div class="guided-done-msg">
+          <span>✅</span> ${isSuperset ? 'Superset' : 'Exercise'} complete!
+        </div>` : ''}
+
+      <!-- Bottom action area -->
+      <div class="guided-actions">
+        ${!allSetsDone && !showRPE ? `
+          <button class="btn btn-primary guided-complete-btn" 
+                  onclick="guidedCompleteSet('${ex.id}', ${currentSetIdx})">
+            Complete Set ${currentSetIdx + 1}
+          </button>` : ''}
+        
+        ${groupDone && !showRPE ? `
+          ${idx < total - 1 ? `
+            <button class="btn btn-primary guided-complete-btn" onclick="guidedNext()">
+              Next Exercise →
+            </button>` : `
+            <button class="btn btn-success guided-complete-btn" onclick="finishWorkout()">
+              🏁 Finish Workout
+            </button>`}` : ''}
+        
+        <div class="guided-nav">
+          <button class="guided-nav-btn" onclick="guidedPrev()" ${idx === 0 ? 'disabled' : ''}>← Prev</button>
+          <button class="guided-nav-btn" onclick="guidedShowList()">☰ List</button>
+          <button class="guided-nav-btn" onclick="guidedNext()" ${idx >= total - 1 ? 'disabled' : ''}>Next →</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderGuidedSetRow(ex, set, i, currentSetIdx, allSetsDone) {
+  const bw = isBW(ex);
+  const inc = increment(ex);
+  const isCurrent = !allSetsDone && i === currentSetIdx;
+  
+  return `
+    <div class="guided-set-row ${set.completed ? 'completed' : ''} ${isCurrent ? 'current' : ''} ${!set.completed && i > currentSetIdx ? 'upcoming' : ''}">
+      <span class="set-number">Set ${i + 1}</span>
+      ${bw
+        ? `<span class="bw-label">BW</span>`
+        : `<div class="input-group">
+            <button class="adj-btn" onclick="adjustWeight('${ex.id}',${i},${-inc})" ${set.completed ? 'disabled' : ''}>−</button>
+            <input class="set-input" type="number" inputmode="decimal"
+                   data-weight="${ex.id}-${i}" value="${set.weight}" step="${inc}" min="0"
+                   onblur="onWeightBlur('${ex.id}',${i},this.value)" ${set.completed ? 'disabled' : ''}>
+            <button class="adj-btn" onclick="adjustWeight('${ex.id}',${i},${inc})" ${set.completed ? 'disabled' : ''}>+</button>
+          </div>`
+      }
+      <div class="input-group">
+        <button class="adj-btn" onclick="adjustReps('${ex.id}',${i},-1)" ${set.completed ? 'disabled' : ''}>−</button>
+        <input class="set-input" type="number" inputmode="numeric"
+               data-reps="${ex.id}-${i}" value="${set.reps}" min="0"
+               onblur="onRepsBlur('${ex.id}',${i},this.value)" ${set.completed ? 'disabled' : ''}>
+        <button class="adj-btn" onclick="adjustReps('${ex.id}',${i},1)" ${set.completed ? 'disabled' : ''}>+</button>
+      </div>
+      <div class="guided-set-status">
+        ${set.completed ? '<span class="guided-check">✓</span>' : isCurrent ? '<span class="guided-arrow">→</span>' : ''}
+      </div>
+    </div>`;
+}
+
+function guidedCompleteSet(exId, setIdx) {
+  const ex = getExData(exId);
+  if (!ex) return;
+  
+  // Read current input values
+  const wInput = document.querySelector(`[data-weight="${exId}-${setIdx}"]`);
+  const rInput = document.querySelector(`[data-reps="${exId}-${setIdx}"]`);
+  if (wInput) ex.sets[setIdx].weight = parseFloat(wInput.value) || 0;
+  if (rInput) ex.sets[setIdx].reps = parseInt(rInput.value) || 0;
+  
+  ex.sets[setIdx].completed = true;
+  
+  const programEx = findProgramEx(exId);
+  const isLast = setIdx >= ex.sets.length - 1;
+  
+  // Pre-fill next set with same weight
+  if (!isLast) {
+    ex.sets[setIdx + 1].weight = ex.sets[setIdx].weight;
+    if (!isAMRAP(programEx)) ex.sets[setIdx + 1].reps = ex.sets[setIdx].reps;
+  }
+  
+  saveCurrent();
+  
+  // Get workout and exercise list for superset logic
+  const workout = S.program.workouts[S.current.type];
+  const exList = getGuidedExerciseList(workout);
+  const group = exList[S.guidedIdx];
+  const isSuperset = group.type === 'superset';
+  
+  if (isSuperset && !isLast) {
+    // In superset: alternate to partner exercise
+    const partnerIdx = S.guidedSuperset === 0 ? 1 : 0;
+    const partner = group.exercises[partnerIdx];
+    const partnerData = getExData(partner.id);
+    const partnerCompletedSets = partnerData ? partnerData.sets.filter(s => s.completed).length : 0;
+    const partnerTotalSets = partner.sets;
+    
+    if (partnerCompletedSets < partnerTotalSets) {
+      // Switch to partner after short rest
+      startTimer(
+        15, // short rest between superset exercises
+        `${partner.name} — Set ${partnerCompletedSets + 1}`,
+        () => { S.guidedSuperset = partnerIdx; render(); }
+      );
+      return;
+    }
+  }
+  
+  if (isSuperset && isLast) {
+    // Check if partner still has sets
+    const partnerIdx = S.guidedSuperset === 0 ? 1 : 0;
+    const partner = group.exercises[partnerIdx];
+    const partnerData = getExData(partner.id);
+    const partnerDone = partnerData && partnerData.sets.every(s => s.completed);
+    
+    if (!partnerDone) {
+      // Full rest, then switch to partner
+      startTimer(
+        programEx?.restSeconds || 75,
+        `${partner.name}`,
+        () => { S.guidedSuperset = partnerIdx; render(); }
+      );
+      return;
+    }
+  }
+  
+  if (!isLast) {
+    // Normal rest between sets
+    startTimer(
+      programEx?.restSeconds || 90,
+      `${programEx?.name} — Set ${setIdx + 2}`,
+      () => render()
+    );
+  } else {
+    // Last set done — show RPE if compound, otherwise just render
+    render();
+  }
+}
+
+function guidedLogRPE(exId, rpeValue) {
+  const ex = getExData(exId);
+  if (ex) {
+    ex.rpe = rpeValue;
+    saveCurrent();
+    showToast(`RPE ${rpeValue} logged`);
+    
+    // Auto-advance to next exercise after a moment
+    setTimeout(() => {
+      const workout = S.program.workouts[S.current.type];
+      const exList = getGuidedExerciseList(workout);
+      if (S.guidedIdx < exList.length - 1) {
+        guidedNext();
+      } else {
+        render();
+      }
+    }, 500);
+  }
+}
+
+function guidedNext() {
+  const workout = S.program.workouts[S.current.type];
+  const exList = getGuidedExerciseList(workout);
+  if (S.guidedIdx < exList.length - 1) {
+    S.guidedIdx++;
+    S.guidedSuperset = 0;
+    render();
+    window.scrollTo(0, 0);
+  }
+}
+
+function guidedPrev() {
+  if (S.guidedIdx > 0) {
+    S.guidedIdx--;
+    S.guidedSuperset = 0;
+    render();
+    window.scrollTo(0, 0);
+  }
+}
+
+function guidedGoTo(idx) {
+  S.guidedIdx = idx;
+  S.guidedSuperset = 0;
+  render();
+  window.scrollTo(0, 0);
+}
+
+function guidedShowList() {
+  S.guided = false;
+  render();
+}
+
+// Re-enter guided mode from list view
+function enterGuided() {
+  S.guided = true;
+  render();
 }
 
 // ============================================================
