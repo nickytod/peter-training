@@ -577,9 +577,22 @@ function groupExercises(exercises) {
 // ============================================================
 function render() {
   updateNavActive();
-  if (S.tab === 'today')   renderToday();
+  if (S.tab === 'today')        renderToday();
+  else if (S.tab === 'plan')    renderPlan();
   else if (S.tab === 'history') renderHistory();
   else if (S.tab === 'stats')   renderStats();
+}
+
+function renderPlan() {
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="page-header">
+      <h1>Training Plan</h1>
+      <p class="subtitle">${S.program.programName || 'PPL Block 1'}</p>
+    </div>
+    <div style="padding: 0 16px;">
+      ${renderUpcomingSchedule()}
+    </div>`;
 }
 
 function switchTab(tab) {
@@ -677,7 +690,6 @@ function renderStartScreen(type, workout) {
       </div>
       <div class="section-gap"></div>
       ${groupExercises(workout.exercises).map(g => renderGroupPreview(g)).join('')}
-      ${renderUpcomingSchedule()}
     </div>`;
 }
 
@@ -694,7 +706,6 @@ function renderRestDay() {
             <span>${t.text}</span>
           </div>`).join('')}
       </div>
-      ${renderUpcomingSchedule()}
     </div>`;
 }
 
@@ -1008,6 +1019,16 @@ function renderExDetail(ex, exData) {
   return `
     <div class="exercise-detail">
       ${ex.notes ? `<div class="exercise-notes">${escHtml(ex.notes)}</div>` : ''}
+      ${ex.warmupSets?.length ? `
+        <div class="warmup-sets-section">
+          <div class="warmup-sets-label">Warm-up Sets</div>
+          ${ex.warmupSets.map(ws => `
+            <div class="warmup-set-row">
+              <span class="warmup-set-info">${ws.weight > 0 ? ws.weight + 'kg' : 'BW'} × ${ws.reps}</span>
+              <span class="warmup-set-note">${escHtml(ws.label)}</span>
+            </div>
+          `).join('')}
+        </div>` : ''}
       ${lastText ? `
         <div class="last-workout-line">
           <span>Last:</span>
@@ -1199,6 +1220,13 @@ function renderGuidedMode(type, workout) {
         </div>
         ${ex.notes ? `<div class="guided-notes">${escHtml(ex.notes)}</div>` : ''}
         ${lastText ? `<div class="guided-last">Last: ${escHtml(lastText)}</div>` : ''}
+        ${ex.warmupSets?.length && completedSets === 0 ? `
+          <div class="guided-warmup">
+            <div class="warmup-sets-label">Warm-up first:</div>
+            ${ex.warmupSets.map(ws => `
+              <span class="warmup-pill">${ws.weight > 0 ? ws.weight + 'kg' : 'BW'} × ${ws.reps}</span>
+            `).join('')}
+          </div>` : ''}
       </div>
 
       <!-- Sets -->

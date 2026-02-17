@@ -21,7 +21,24 @@
           "startWeight": 60,
           "restSeconds": 150,
           "isCompound": true,
-          "notes": "Full ROM, pause at chest"
+          "notes": "Full ROM, pause at chest",
+          "warmupSets": [
+            {
+              "label": "Bar only",
+              "weight": 20,
+              "reps": 10
+            },
+            {
+              "label": "50%",
+              "weight": 30.0,
+              "reps": 8
+            },
+            {
+              "label": "75%",
+              "weight": 45.0,
+              "reps": 5
+            }
+          ]
         },
         {
           "id": "ohp",
@@ -32,7 +49,24 @@
           "startWeight": 35,
           "restSeconds": 150,
           "isCompound": true,
-          "notes": "Standing, strict press"
+          "notes": "Standing, strict press",
+          "warmupSets": [
+            {
+              "label": "Bar only",
+              "weight": 20,
+              "reps": 10
+            },
+            {
+              "label": "50%",
+              "weight": 17.5,
+              "reps": 8
+            },
+            {
+              "label": "75%",
+              "weight": 25.0,
+              "reps": 5
+            }
+          ]
         },
         {
           "id": "incline-db-press",
@@ -85,6 +119,16 @@
           "startWeight": 0,
           "restSeconds": 60,
           "notes": "AMRAP. Slow eccentric."
+        },
+        {
+          "id": "ab-rollout-push",
+          "name": "Ab Wheel Rollout / Plank",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "startWeight": 0,
+          "restSeconds": 60,
+          "notes": "Ab wheel if available, otherwise 45-60 sec plank. Brace core tight."
         }
       ]
     },
@@ -101,7 +145,19 @@
           "startWeight": 0,
           "restSeconds": 150,
           "isCompound": true,
-          "notes": "AMRAP each set (target 6-10). BW. Band assist if <6, add weight if >10."
+          "notes": "AMRAP each set (target 6-10). BW. Band assist if <6, add weight if >10.",
+          "warmupSets": [
+            {
+              "label": "Band-assisted or half reps",
+              "weight": 0,
+              "reps": 5
+            },
+            {
+              "label": "Easy pace",
+              "weight": 0,
+              "reps": 3
+            }
+          ]
         },
         {
           "id": "barbell-row",
@@ -112,7 +168,24 @@
           "startWeight": 60,
           "restSeconds": 150,
           "isCompound": true,
-          "notes": "Overhand grip, torso ~45\u00b0"
+          "notes": "Overhand grip, torso ~45\u00b0",
+          "warmupSets": [
+            {
+              "label": "Bar only",
+              "weight": 20,
+              "reps": 10
+            },
+            {
+              "label": "50%",
+              "weight": 30.0,
+              "reps": 8
+            },
+            {
+              "label": "75%",
+              "weight": 45.0,
+              "reps": 5
+            }
+          ]
         },
         {
           "id": "db-row",
@@ -165,6 +238,16 @@
           "startWeight": 0,
           "restSeconds": 60,
           "notes": "Max hold each set. Target 45-60 sec. Log time in reps field (seconds)."
+        },
+        {
+          "id": "cable-crunch-pull",
+          "name": "Weighted Crunch (Plate)",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "startWeight": 10,
+          "restSeconds": 60,
+          "notes": "Hold plate on chest. Slow controlled crunch. Full range."
         }
       ]
     },
@@ -181,7 +264,24 @@
           "startWeight": 60,
           "restSeconds": 150,
           "isCompound": true,
-          "notes": "Below parallel. Use the rack."
+          "notes": "Below parallel. Use the rack.",
+          "warmupSets": [
+            {
+              "label": "Bar only",
+              "weight": 20,
+              "reps": 10
+            },
+            {
+              "label": "50%",
+              "weight": 30.0,
+              "reps": 8
+            },
+            {
+              "label": "75%",
+              "weight": 45.0,
+              "reps": 5
+            }
+          ]
         },
         {
           "id": "rdl",
@@ -192,7 +292,24 @@
           "startWeight": 60,
           "restSeconds": 150,
           "isCompound": true,
-          "notes": "Barbell. Hinge pattern. Slow eccentric."
+          "notes": "Barbell. Hinge pattern. Slow eccentric.",
+          "warmupSets": [
+            {
+              "label": "Bar only",
+              "weight": 20,
+              "reps": 10
+            },
+            {
+              "label": "50%",
+              "weight": 30.0,
+              "reps": 8
+            },
+            {
+              "label": "75%",
+              "weight": 45.0,
+              "reps": 5
+            }
+          ]
         },
         {
           "id": "bulgarian-split-squat",
@@ -245,6 +362,16 @@
           "startWeight": 60,
           "restSeconds": 60,
           "notes": "Barbell on back. Pause 2sec at top. Full ROM."
+        },
+        {
+          "id": "russian-twist",
+          "name": "Russian Twist (Plate)",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "startWeight": 10,
+          "restSeconds": 60,
+          "notes": "Per side. Hold plate, twist controlled. Feet elevated."
         }
       ]
     }
