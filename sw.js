@@ -1,5 +1,5 @@
 // Peter Training — Service Worker
-const CACHE = 'pt-v1';
+const CACHE = 'pt-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -27,16 +27,14 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Cache-first for assets, network-first for program.json
-  if (e.request.url.includes('program.json')) {
-    e.respondWith(
-      fetch(e.request)
-        .then(r => { caches.open(CACHE).then(c => c.put(e.request, r.clone())); return r; })
-        .catch(() => caches.match(e.request))
-    );
-  } else {
-    e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request))
-    );
-  }
+  // Network-first for all assets (ensures updates come through)
+  e.respondWith(
+    fetch(e.request)
+      .then(r => {
+        const clone = r.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return r;
+      })
+      .catch(() => caches.match(e.request))
+  );
 });
