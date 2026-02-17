@@ -1,0 +1,252 @@
+{
+  "programName": "PPL Block 1",
+  "startDate": "2026-02-18",
+  "cycleDays": [
+    "push",
+    "pull",
+    "legs",
+    "rest"
+  ],
+  "workouts": {
+    "push": {
+      "name": "Push Day",
+      "warmup": "Foam roll 2min \u2192 arm circles, band pull-aparts \u00d715, push-ups \u00d710 \u2192 2 warm-up sets bench (bar, then 50%)",
+      "exercises": [
+        {
+          "id": "bench-press",
+          "name": "Barbell Bench Press",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 8,
+          "startWeight": 60,
+          "restSeconds": 150,
+          "isCompound": true,
+          "notes": "Full ROM, pause at chest"
+        },
+        {
+          "id": "ohp",
+          "name": "Overhead Press",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 8,
+          "startWeight": 35,
+          "restSeconds": 150,
+          "isCompound": true,
+          "notes": "Standing, strict press"
+        },
+        {
+          "id": "incline-db-press",
+          "name": "Incline DB Press",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "startWeight": 22,
+          "restSeconds": 75,
+          "notes": "Bench at ~30\u00b0 incline. Weight is per hand."
+        },
+        {
+          "id": "dips",
+          "name": "Dips",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "startWeight": 0,
+          "restSeconds": 75,
+          "notes": "Bodyweight. Lean forward for chest. Add weight when >12 easy."
+        },
+        {
+          "id": "lateral-raise",
+          "name": "DB Lateral Raise",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "startWeight": 10,
+          "restSeconds": 15,
+          "supersetWith": "tricep-extension",
+          "notes": "Weight per hand. Superset with tricep extension."
+        },
+        {
+          "id": "tricep-extension",
+          "name": "Overhead Tricep Extension (EZ Bar)",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 12,
+          "startWeight": 22.5,
+          "restSeconds": 75,
+          "supersetWith": "lateral-raise",
+          "notes": "Superset with lateral raise."
+        },
+        {
+          "id": "pushups-burnout",
+          "name": "Push-ups (Burnout)",
+          "sets": 2,
+          "repsMin": 1,
+          "repsMax": 100,
+          "startWeight": 0,
+          "restSeconds": 60,
+          "notes": "AMRAP. Slow eccentric."
+        }
+      ]
+    },
+    "pull": {
+      "name": "Pull Day",
+      "warmup": "Foam roll 2min \u2192 arm circles, band pull-aparts \u00d715, dead hang 30s \u2192 1 warm-up set pull-ups, 1 warm-up set rows",
+      "exercises": [
+        {
+          "id": "pull-ups",
+          "name": "Pull-ups",
+          "sets": 4,
+          "repsMin": 1,
+          "repsMax": 100,
+          "startWeight": 0,
+          "restSeconds": 150,
+          "isCompound": true,
+          "notes": "AMRAP each set (target 6-10). BW. Band assist if <6, add weight if >10."
+        },
+        {
+          "id": "barbell-row",
+          "name": "Barbell Row",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 8,
+          "startWeight": 60,
+          "restSeconds": 150,
+          "isCompound": true,
+          "notes": "Overhand grip, torso ~45\u00b0"
+        },
+        {
+          "id": "db-row",
+          "name": "Single-Arm DB Row",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "startWeight": 26,
+          "restSeconds": 75,
+          "notes": "Per arm. Knee on bench, full stretch at bottom."
+        },
+        {
+          "id": "ez-curl",
+          "name": "EZ Bar Curl",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "startWeight": 27.5,
+          "restSeconds": 75,
+          "notes": "Strict form, no swinging"
+        },
+        {
+          "id": "face-pull",
+          "name": "Face Pull (Band)",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "startWeight": 0,
+          "restSeconds": 15,
+          "supersetWith": "hammer-curl",
+          "notes": "Medium band. External rotation at top. Superset with hammer curl."
+        },
+        {
+          "id": "hammer-curl",
+          "name": "DB Hammer Curl",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 12,
+          "startWeight": 14,
+          "restSeconds": 75,
+          "supersetWith": "face-pull",
+          "notes": "Per hand. Superset with face pull."
+        },
+        {
+          "id": "dead-hang",
+          "name": "Dead Hang",
+          "sets": 2,
+          "repsMin": 1,
+          "repsMax": 1,
+          "startWeight": 0,
+          "restSeconds": 60,
+          "notes": "Max hold each set. Target 45-60 sec. Log time in reps field (seconds)."
+        }
+      ]
+    },
+    "legs": {
+      "name": "Leg Day",
+      "warmup": "Foam roll 2min \u2192 hip circles, leg swings \u00d710 each, BW squats \u00d715, glute bridges \u00d715 \u2192 2 warm-up sets squat (bar, then 50%)",
+      "exercises": [
+        {
+          "id": "back-squat",
+          "name": "Barbell Back Squat",
+          "sets": 4,
+          "repsMin": 6,
+          "repsMax": 8,
+          "startWeight": 60,
+          "restSeconds": 150,
+          "isCompound": true,
+          "notes": "Below parallel. Use the rack."
+        },
+        {
+          "id": "rdl",
+          "name": "Romanian Deadlift",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 10,
+          "startWeight": 60,
+          "restSeconds": 150,
+          "isCompound": true,
+          "notes": "Barbell. Hinge pattern. Slow eccentric."
+        },
+        {
+          "id": "bulgarian-split-squat",
+          "name": "Bulgarian Split Squat (DB)",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 10,
+          "startWeight": 18,
+          "restSeconds": 75,
+          "notes": "Per leg. Weight per hand. Rear foot on bench."
+        },
+        {
+          "id": "hip-thrust",
+          "name": "Barbell Hip Thrust",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 12,
+          "startWeight": 70,
+          "restSeconds": 75,
+          "notes": "Back against bench, full hip extension at top."
+        },
+        {
+          "id": "walking-lunge",
+          "name": "DB Walking Lunge",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 10,
+          "startWeight": 16,
+          "restSeconds": 15,
+          "supersetWith": "hanging-leg-raise",
+          "notes": "Per leg. Weight per hand. Superset with hanging leg raise."
+        },
+        {
+          "id": "hanging-leg-raise",
+          "name": "Hanging Leg Raise",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "startWeight": 0,
+          "restSeconds": 75,
+          "supersetWith": "walking-lunge",
+          "notes": "Control the swing. Superset with walking lunge."
+        },
+        {
+          "id": "calf-raise",
+          "name": "Calf Raise (Barbell)",
+          "sets": 3,
+          "repsMin": 15,
+          "repsMax": 20,
+          "startWeight": 60,
+          "restSeconds": 60,
+          "notes": "Barbell on back. Pause 2sec at top. Full ROM."
+        }
+      ]
+    }
+  }
+}

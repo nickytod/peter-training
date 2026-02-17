@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0">
+
+  <!-- PWA / iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Training">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0F0F0F">
+  <meta name="description" content="Peter's personal PPL workout tracker">
+
+  <title>Peter Training</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Prevent flash of unstyled content -->
+  <style>
+    body { background: #0F0F0F; }
+    #app { min-height: 100dvh; }
+    .splash {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 100dvh; gap: 16px;
+    }
+    .splash-icon { font-size: 64px; }
+    .splash-title { color: #fff; font-family: -apple-system, sans-serif;
+      font-size: 22px; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <!-- Main content area -->
+  <main id="app">
+    <div class="splash">
+      <div class="splash-icon">🏋️</div>
+      <div class="splash-title">Loading…</div>
+    </div>
+  </main>
+
+  <!-- Rest Timer Overlay -->
+  <div id="timer-overlay" class="timer-overlay" role="dialog" aria-label="Rest timer">
+    <!-- Populated by renderTimer() -->
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav" role="navigation">
+    <button class="nav-btn active" data-tab="today"   onclick="switchTab('today')">
+      <span class="nav-icon">🏋️</span>
+      <span>Today</span>
+    </button>
+    <button class="nav-btn" data-tab="history" onclick="switchTab('history')">
+      <span class="nav-icon">📋</span>
+      <span>History</span>
+    </button>
+    <button class="nav-btn" data-tab="stats"   onclick="switchTab('stats')">
+      <span class="nav-icon">📊</span>
+      <span>Stats</span>
+    </button>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>
