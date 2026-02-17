@@ -248,5 +248,24 @@
         }
       ]
     }
+  },
+  "running": {
+    "runsPerCycle": [
+      0,
+      2
+    ],
+    "currentPhase": "z2",
+    "z2": {
+      "duration": "30-45 min",
+      "hrTarget": "110-129 bpm",
+      "pace": "5.5-6.0 km/h",
+      "incline": "2-3%"
+    },
+    "intervals": {
+      "warmup": "10 min easy",
+      "work": "4 x 4 min @ 85-90% max HR",
+      "recovery": "3 min easy",
+      "cooldown": "5 min easy"
+    }
   }
 }

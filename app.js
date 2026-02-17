@@ -698,60 +698,182 @@ function renderRestDay() {
 
 function renderUpcomingSchedule() {
   const icons = { push: '💪', pull: '🦾', legs: '🦵', rest: '😴' };
-  const names = { push: 'Push Day', pull: 'Pull Day', legs: 'Leg Day', rest: 'Rest' };
-  const startDate = new Date(S.program.startDate + 'T12:00:00');
+  const names = { push: 'Push', pull: 'Pull', legs: 'Legs', rest: 'Rest' };
   const cycle = S.program.cycleDays;
   
-  const days = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    const dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-    const diff = Math.round((new Date(dateStr + 'T12:00:00') - startDate) / 86400000);
-    const type = cycle[((diff % cycle.length) + cycle.length) % cycle.length];
-    const isToday = i === 0;
-    const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
-    const dayNum = d.getDate();
-    days.push({ dateStr, type, isToday, dayName, dayNum });
+  // Running config from program.json or defaults
+  const runConfig = S.program.running || {};
+  const runsPerCycle = runConfig.runsPerCycle || [0, 2]; // which cycle indices get runs (push=0, legs=2)
+  const runType = runConfig.currentPhase || 'z2'; // 'z2' or 'mixed'
+  
+  // Build cycle items: strength + runs interleaved
+  const items = [];
+  const startDate = new Date(S.program.startDate + 'T12:00:00');
+  const today = new Date(todayStr() + 'T12:00:00');
+  const daysSinceStart = Math.round((today - startDate) / 86400000);
+  const currentCyclePos = ((daysSinceStart % cycle.length) + cycle.length) % cycle.length;
+  
+  // Show 2 full cycles (8 sessions)
+  for (let i = 0; i < cycle.length * 2; i++) {
+    const type = cycle[i % cycle.length];
+    const isCurrent = i === currentCyclePos;
+    const isPast = i < currentCyclePos;
+    
+    items.push({
+      kind: 'strength',
+      type,
+      isCurrent,
+      isPast,
+      idx: items.length,
+    });
+    
+    // Add run after this strength session if applicable
+    if (type !== 'rest' && runsPerCycle.includes(i % cycle.length)) {
+      items.push({
+        kind: 'run',
+        runType: runType === 'mixed' && items.filter(it => it.kind === 'run').length % 3 === 2 ? 'intervals' : 'z2',
+        parentType: type,
+        isCurrent: false,
+        isPast,
+        idx: items.length,
+      });
+    }
   }
   
-  const selected = S.scheduleSelected !== undefined ? S.scheduleSelected : null;
-  const selDay = selected !== null ? days[selected] : null;
-  const selWorkout = selDay && selDay.type !== 'rest' ? S.program.workouts[selDay.type] : null;
+  const selected = S.scheduleSelected;
+  const selItem = selected !== null && selected !== undefined ? items[selected] : null;
   
   return `
     <div class="schedule-section">
-      <div class="schedule-title">Upcoming Week</div>
-      <div class="schedule-grid">
-        ${days.map((d, i) => `
-          <div class="schedule-day ${d.isToday ? 'today' : ''} ${d.type === 'rest' ? 'rest' : ''} ${selected === i ? 'selected' : ''}"
-               onclick="selectScheduleDay(${i})">
-            <div class="schedule-day-name">${d.dayName}</div>
-            <div class="schedule-day-num">${d.dayNum}</div>
-            <div class="schedule-day-icon">${icons[d.type]}</div>
-            <div class="schedule-day-type">${names[d.type]}</div>
+      <div class="schedule-title">Training Cycle</div>
+      <div class="cycle-list">
+        ${items.map((item, i) => {
+          if (item.kind === 'strength') {
+            const isRest = item.type === 'rest';
+            const workout = !isRest ? S.program.workouts[item.type] : null;
+            const isSelected = selected === i;
+            
+            return `
+              <div class="cycle-item ${item.isCurrent ? 'current' : ''} ${item.isPast ? 'past' : ''} ${isRest ? 'rest' : ''} ${isSelected ? 'selected' : ''}"
+                   onclick="selectScheduleDay(${i})">
+                <div class="cycle-item-icon">${icons[item.type]}</div>
+                <div class="cycle-item-info">
+                  <div class="cycle-item-name">${names[item.type]}${isRest ? '' : ' Day'}</div>
+                  ${workout ? `<div class="cycle-item-meta">${workout.exercises.length} exercises</div>` : 
+                    `<div class="cycle-item-meta">Recovery</div>`}
+                </div>
+                ${item.isCurrent ? '<div class="cycle-today-badge">Today</div>' : ''}
+                <div class="cycle-chevron">${isSelected ? '▲' : '▼'}</div>
+              </div>
+              ${isSelected ? renderCycleDetail(item, workout) : ''}`;
+          } else {
+            // Run item
+            const isSelected = selected === i;
+            const runIcon = item.runType === 'intervals' ? '⚡' : '🏃';
+            const runName = item.runType === 'intervals' ? 'Interval Run' : 'Zone 2 Run';
+            const runMeta = item.runType === 'intervals' ? '4×4 min @ 85-90% HR' : '30-45 min · HR <130';
+            
+            return `
+              <div class="cycle-item run ${item.isPast ? 'past' : ''} ${isSelected ? 'selected' : ''}"
+                   onclick="selectScheduleDay(${i})">
+                <div class="cycle-item-icon">${runIcon}</div>
+                <div class="cycle-item-info">
+                  <div class="cycle-item-name">${runName}</div>
+                  <div class="cycle-item-meta">${runMeta}</div>
+                </div>
+                <div class="cycle-chevron">${isSelected ? '▲' : '▼'}</div>
+              </div>
+              ${isSelected ? renderRunDetail(item) : ''}`;
+          }
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+function renderCycleDetail(item, workout) {
+  if (item.type === 'rest') {
+    return `<div class="cycle-detail rest-detail">
+      <div class="schedule-detail-rest">Recovery — sleep, protein, light walk, mobility work</div>
+    </div>`;
+  }
+  
+  return `
+    <div class="cycle-detail">
+      <div class="schedule-detail-exercises">
+        ${workout.exercises.map(ex => `
+          <div class="schedule-ex-row">
+            <span class="schedule-ex-name">${escHtml(ex.name)}</span>
+            <span class="schedule-ex-meta">${ex.sets}×${repsDisplay(ex)} ${isBW(ex) ? 'BW' : ex.startWeight + 'kg'}</span>
           </div>
         `).join('')}
       </div>
-      ${selDay ? `
-        <div class="schedule-detail">
-          <div class="schedule-detail-header">
-            <span>${icons[selDay.type]}</span>
-            <strong>${names[selDay.type]}</strong>
-            <span class="schedule-detail-date">${fmtDateShort(selDay.dateStr)}</span>
-          </div>
-          ${selWorkout ? `
-            <div class="schedule-detail-exercises">
-              ${selWorkout.exercises.map(ex => `
-                <div class="schedule-ex-row">
-                  <span class="schedule-ex-name">${escHtml(ex.name)}</span>
-                  <span class="schedule-ex-meta">${ex.sets}×${repsDisplay(ex)} ${isBW(ex) ? 'BW' : ex.startWeight + 'kg'}</span>
-                </div>
-              `).join('')}
-            </div>` : `
-            <div class="schedule-detail-rest">Recovery day — sleep, protein, light movement</div>`}
+      ${item.isCurrent ? `
+        <div class="cycle-detail-action">
+          <button class="btn btn-primary" onclick="event.stopPropagation(); startWorkout('${item.type}')">
+            ▶ Start ${workout.name}
+          </button>
         </div>` : ''}
     </div>`;
+}
+
+function renderRunDetail(item) {
+  if (item.runType === 'intervals') {
+    return `
+      <div class="cycle-detail">
+        <div class="run-detail-content">
+          <div class="run-protocol">
+            <div class="run-protocol-title">Interval Protocol</div>
+            <div class="run-step">🔥 Warm-up: 10 min easy jog</div>
+            <div class="run-step">⚡ 4 × 4 min @ 85-90% max HR (156-166 bpm)</div>
+            <div class="run-step">🚶 3 min easy recovery between intervals</div>
+            <div class="run-step">❄️ Cool-down: 5 min easy jog</div>
+            <div class="run-total">~35 min total</div>
+          </div>
+        </div>
+        <div class="cycle-detail-action">
+          <button class="btn btn-success" onclick="event.stopPropagation(); logRun('intervals')">
+            ✅ Mark Complete
+          </button>
+        </div>
+      </div>`;
+  }
+  
+  return `
+    <div class="cycle-detail">
+      <div class="run-detail-content">
+        <div class="run-protocol">
+          <div class="run-protocol-title">Zone 2 Protocol</div>
+          <div class="run-step">🎯 HR target: 110-129 bpm (hard ceiling 130)</div>
+          <div class="run-step">🏃 Pace: 5.5-6.0 km/h, 2-3% incline</div>
+          <div class="run-step">⏱️ Duration: 30-45 min</div>
+          <div class="run-step">💡 Should feel easy — can hold a conversation</div>
+          <div class="run-total">Use iFit trail program + manual speed override</div>
+        </div>
+      </div>
+      <div class="cycle-detail-action">
+        <button class="btn btn-success" onclick="event.stopPropagation(); logRun('z2')">
+          ✅ Mark Complete
+        </button>
+      </div>
+    </div>`;
+}
+
+function logRun(type) {
+  const runLog = {
+    id: genId(),
+    date: todayStr(),
+    type: 'run-' + type,
+    kind: 'run',
+    runType: type,
+    startTime: new Date().toISOString(),
+    endTime: new Date().toISOString(),
+    exercises: [],
+  };
+  S.logs.push(runLog);
+  localStorage.setItem(LS.LOGS, JSON.stringify(S.logs));
+  showToast(type === 'z2' ? 'Zone 2 run logged! 🏃' : 'Interval run logged! ⚡');
+  S.scheduleSelected = null;
+  render();
 }
 
 function selectScheduleDay(idx) {
