@@ -820,12 +820,11 @@ function renderCycleDetail(item, workout) {
           </div>
         `).join('')}
       </div>
-      ${item.isCurrent ? `
-        <div class="cycle-detail-action">
-          <button class="btn btn-primary" onclick="event.stopPropagation(); startWorkout('${item.type}')">
-            ▶ Start ${workout.name}
-          </button>
-        </div>` : ''}
+      <div class="cycle-detail-action">
+        <button class="btn btn-primary" onclick="event.stopPropagation(); switchTab('today'); startWorkout('${item.type}')">
+          ▶ Start ${workout.name}
+        </button>
+      </div>
     </div>`;
 }
 

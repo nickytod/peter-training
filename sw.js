@@ -1,5 +1,5 @@
 // Peter Training — Service Worker
-const CACHE = 'pt-v7';
+const CACHE = 'pt-v8';
 const ASSETS = [
   './',
   './index.html',
