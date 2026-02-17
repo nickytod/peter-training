@@ -332,16 +332,22 @@ body {
 .sets-list { display: flex; flex-direction: column; gap: 8px; }
 
 .set-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 32px 1fr 1fr 36px;
+  grid-template-rows: auto;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  gap: 4px 4px;
+  padding: 8px 8px;
   background: var(--bg-card-2);
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   transition: all var(--transition);
-  min-height: 52px;
+  min-height: 48px;
 }
+.set-row .input-unit { display: none; }
+.set-row .pr-badge { display: none; }
+.set-row .input-group { min-width: 0; }
+.set-row .set-input { font-size: 14px; }
 .set-row.completed {
   background: rgba(48,209,88,0.06);
   border-color: rgba(48,209,88,0.2);
@@ -367,13 +373,13 @@ body {
 }
 
 .adj-btn {
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   border-radius: 6px;
   border: none;
   background: rgba(255,255,255,0.06);
   color: var(--text);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 300;
   cursor: pointer;
   display: flex;
@@ -392,7 +398,7 @@ body {
   background: none;
   border: none;
   color: var(--text);
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 600;
   text-align: center;
   outline: none;
@@ -421,8 +427,8 @@ body {
 }
 
 .complete-btn {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: 2px solid var(--border-light);
   background: none;
