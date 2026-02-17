@@ -674,11 +674,11 @@ function renderStartScreen(type, workout) {
       </div>
       <div class="section-gap"></div>
       ${groupExercises(workout.exercises).map(g => renderGroupPreview(g)).join('')}
+      ${renderUpcomingSchedule()}
     </div>`;
 }
 
 function renderRestDay() {
-  const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
   return `
     <div class="rest-screen">
       <div class="rest-icon">😴</div>
@@ -690,6 +690,42 @@ function renderRestDay() {
             <span class="tip-icon">${t.icon}</span>
             <span>${t.text}</span>
           </div>`).join('')}
+      </div>
+      ${renderUpcomingSchedule()}
+    </div>`;
+}
+
+function renderUpcomingSchedule() {
+  const icons = { push: '💪', pull: '🦾', legs: '🦵', rest: '😴' };
+  const names = { push: 'Push Day', pull: 'Pull Day', legs: 'Leg Day', rest: 'Rest' };
+  const startDate = new Date(S.program.startDate + 'T12:00:00');
+  const cycle = S.program.cycleDays;
+  
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const diff = Math.round((new Date(dateStr + 'T12:00:00') - startDate) / 86400000);
+    const type = cycle[((diff % cycle.length) + cycle.length) % cycle.length];
+    const isToday = i === 0;
+    const dayName = d.toLocaleDateString('en-GB', { weekday: 'short' });
+    const dayNum = d.getDate();
+    days.push({ dateStr, type, isToday, dayName, dayNum });
+  }
+  
+  return `
+    <div class="schedule-section">
+      <div class="schedule-title">Upcoming Week</div>
+      <div class="schedule-grid">
+        ${days.map(d => `
+          <div class="schedule-day ${d.isToday ? 'today' : ''} ${d.type === 'rest' ? 'rest' : ''}">
+            <div class="schedule-day-name">${d.dayName}</div>
+            <div class="schedule-day-num">${d.dayNum}</div>
+            <div class="schedule-day-icon">${icons[d.type]}</div>
+            <div class="schedule-day-type">${names[d.type]}</div>
+          </div>
+        `).join('')}
       </div>
     </div>`;
 }
