@@ -1431,6 +1431,87 @@ input[type="number"] { -moz-appearance: textfield; }
 .guided-nav-btn:active { background: var(--bg-card-2); }
 .guided-nav-btn:disabled { opacity: 0.3; }
 
+/* Progress bar (full width) */
+.guided-progress-bar-track {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.guided-progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Warm-up set row */
+.guided-set-row.warmup-row {
+  background: rgba(255,204,0,0.06);
+  border-color: rgba(255,204,0,0.1);
+}
+.warmup-badge {
+  background: #ffcc00 !important;
+  color: #000 !important;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+/* Notes input */
+.guided-notes-input {
+  margin: 8px 0 12px;
+}
+.exercise-note-field {
+  width: 100%;
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+.exercise-note-field:focus {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.exercise-note-field::placeholder { color: var(--text-dim); }
+
+/* Timer overview (workout remaining) */
+.timer-overview {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin: 12px 0;
+  max-width: 300px;
+}
+.timer-ex-pill {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  color: var(--text-dim);
+}
+.timer-ex-pill.done {
+  background: rgba(48,209,88,0.15);
+  color: var(--success);
+  text-decoration: line-through;
+}
+.timer-ex-pill.partial {
+  background: rgba(74,144,217,0.15);
+  color: var(--accent);
+}
+
 /* ---- Warm-up Sets ---- */
 .warmup-sets-section {
   background: rgba(255,204,0,0.06);

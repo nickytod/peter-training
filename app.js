@@ -81,6 +81,9 @@ async function init() {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
+  // Wake Lock — keep screen on during workouts
+  requestWakeLock();
+
   render();
 }
 
@@ -249,15 +252,26 @@ function startWorkout(type) {
     type:      type,
     startTime: new Date().toISOString(),
     endTime:   null,
-    exercises: workout.exercises.map(ex => ({
-      exerciseId: ex.id,
-      sets: Array.from({ length: ex.sets }, () => ({
+    exercises: workout.exercises.map(ex => {
+      const warmups = (ex.warmupSets || []).map(ws => ({
+        weight: ws.weight,
+        reps: ws.reps,
+        completed: false,
+        warmup: true,
+      }));
+      const working = Array.from({ length: ex.sets }, () => ({
         weight:    lastWeight(ex.id, ex),
         reps:      isAMRAP(ex) ? 0 : ex.repsMax,
         completed: false,
-      })),
-      rpe: null,
-    })),
+        warmup: false,
+      }));
+      return {
+        exerciseId: ex.id,
+        sets: [...warmups, ...working],
+        rpe: null,
+        notes: '',
+      };
+    }),
   };
 
   saveCurrent();
@@ -507,6 +521,28 @@ function renderTimer() {
   const done    = completed;
 
   const fgClass = done ? 'done' : urgent ? 'urgent' : '';
+  
+  // Format as mm:ss
+  const mins = Math.floor(Math.ceil(remaining) / 60);
+  const secs = Math.ceil(remaining) % 60;
+  const timeStr = done ? '✓' : (mins > 0 ? `${mins}:${String(secs).padStart(2,'0')}` : String(secs));
+  const unitStr = done ? 'Done!' : (mins > 0 ? '' : 'sec');
+
+  // Workout overview for #6
+  let overviewHtml = '';
+  if (S.current) {
+    const workout = S.program.workouts[S.current.type];
+    if (workout) {
+      overviewHtml = `<div class="timer-overview">
+        ${workout.exercises.map(ex => {
+          const exData = getExData(ex.id);
+          const allDone = exData?.sets?.every(s => s.completed);
+          const anyDone = exData?.sets?.some(s => s.completed);
+          return `<span class="timer-ex-pill ${allDone ? 'done' : anyDone ? 'partial' : ''}">${ex.name.split(' ')[0]}</span>`;
+        }).join('')}
+      </div>`;
+    }
+  }
 
   overlay.innerHTML = `
     <div class="timer-content">
@@ -520,11 +556,12 @@ function renderTimer() {
                   transform="rotate(-90 110 110)"/>
         </svg>
         <div class="timer-seconds">
-          <div class="timer-num">${done ? '✓' : secStr}</div>
-          <div class="timer-unit">${done ? 'Done!' : 'seconds'}</div>
+          <div class="timer-num">${timeStr}</div>
+          <div class="timer-unit">${unitStr}</div>
         </div>
       </div>
       <div class="timer-sub">${escHtml(label)}</div>
+      ${overviewHtml}
       <button class="timer-skip" onclick="skipTimer()">
         ${done ? 'Continue' : 'Skip Rest'}
       </button>
@@ -1169,6 +1206,10 @@ function renderGuidedMode(type, workout) {
   // Calculate overall progress
   const { done: exDone, total: exTotal } = getProgress();
   
+  // Total sets across entire workout for progress bar
+  const completedSetsTotal = S.current.exercises.reduce((sum, e) => sum + e.sets.filter(s => s.completed).length, 0);
+  const totalSetsAll = S.current.exercises.reduce((sum, e) => sum + e.sets.length, 0);
+  
   // Current set info
   const completedSets = exData ? exData.sets.filter(s => s.completed).length : 0;
   const totalSets = ex.sets;
@@ -1195,6 +1236,9 @@ function renderGuidedMode(type, workout) {
     <div class="guided-container">
       <!-- Progress bar -->
       <div class="guided-progress">
+        <div class="guided-progress-bar-track">
+          <div class="guided-progress-bar-fill" style="width:${Math.round(((completedSetsTotal) / totalSetsAll) * 100)}%"></div>
+        </div>
         <div class="guided-progress-dots">
           ${exList.map((g, i) => {
             const gDone = g.exercises.every(e => {
@@ -1205,7 +1249,7 @@ function renderGuidedMode(type, workout) {
                          onclick="guidedGoTo(${i})"></div>`;
           }).join('')}
         </div>
-        <div class="guided-progress-text">Exercise ${idx + 1} of ${total}</div>
+        <div class="guided-progress-text">Exercise ${idx + 1} of ${total} · ${completedSetsTotal}/${totalSetsAll} sets</div>
       </div>
 
       <!-- Exercise header -->
@@ -1219,13 +1263,6 @@ function renderGuidedMode(type, workout) {
         </div>
         ${ex.notes ? `<div class="guided-notes">${escHtml(ex.notes)}</div>` : ''}
         ${lastText ? `<div class="guided-last">Last: ${escHtml(lastText)}</div>` : ''}
-        ${ex.warmupSets?.length && completedSets === 0 ? `
-          <div class="guided-warmup">
-            <div class="warmup-sets-label">Warm-up first:</div>
-            ${ex.warmupSets.map(ws => `
-              <span class="warmup-pill">${ws.weight > 0 ? ws.weight + 'kg' : 'BW'} × ${ws.reps}</span>
-            `).join('')}
-          </div>` : ''}
       </div>
 
       <!-- Sets -->
@@ -1242,6 +1279,13 @@ function renderGuidedMode(type, workout) {
           </div>
           <div class="rpe-scale"><span>Light</span><span>Max</span></div>
         </div>` : ''}
+
+      <!-- Notes field -->
+      <div class="guided-notes-input">
+        <input type="text" class="exercise-note-field" placeholder="Add a note for Peter..."
+               value="${escHtml(exData?.notes || '')}"
+               onblur="saveExNote('${ex.id}', this.value)">
+      </div>
 
       ${groupDone && !showRPE ? `
         <div class="guided-done-msg">
@@ -1278,10 +1322,15 @@ function renderGuidedSetRow(ex, set, i, currentSetIdx, allSetsDone) {
   const bw = isBW(ex);
   const inc = increment(ex);
   const isCurrent = !allSetsDone && i === currentSetIdx;
+  const isWarmup = set.warmup;
+  // Calculate working set number (exclude warmups)
+  const exData = getExData(ex.id);
+  const warmupCount = exData ? exData.sets.filter(s => s.warmup).length : 0;
+  const setLabel = isWarmup ? 'W' : String(i + 1 - warmupCount);
   
   return `
-    <div class="guided-set-row ${set.completed ? 'completed' : ''} ${isCurrent ? 'current' : ''} ${!set.completed && i > currentSetIdx ? 'upcoming' : ''}">
-      <span class="set-number">Set ${i + 1}</span>
+    <div class="guided-set-row ${set.completed ? 'completed' : ''} ${isCurrent ? 'current' : ''} ${!set.completed && i > currentSetIdx ? 'upcoming' : ''} ${isWarmup ? 'warmup-row' : ''}">
+      <span class="set-number ${isWarmup ? 'warmup-badge' : ''}">${setLabel}</span>
       ${bw
         ? `<span class="bw-label">BW</span>`
         : `<div class="input-group">
@@ -1429,6 +1478,11 @@ function guidedGoTo(idx) {
   S.guidedSuperset = 0;
   render();
   window.scrollTo(0, 0);
+}
+
+function saveExNote(exId, val) {
+  const ex = getExData(exId);
+  if (ex) { ex.notes = val; saveCurrent(); }
 }
 
 function guidedShowList() {
@@ -1819,6 +1873,21 @@ function drawChart(ctx, data, W, H, bwMode) {
 // ============================================================
 //  UTILITIES
 // ============================================================
+// Wake Lock API — keeps screen on
+let _wakeLock = null;
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      _wakeLock = await navigator.wakeLock.request('screen');
+      _wakeLock.addEventListener('release', () => { _wakeLock = null; });
+    }
+  } catch (e) { /* Wake Lock not available or denied */ }
+}
+// Re-request on visibility change (iOS releases it when tab is backgrounded)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && S.current) requestWakeLock();
+});
+
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
