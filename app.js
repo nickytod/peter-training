@@ -444,6 +444,14 @@ function onRepsBlur(exId, idx, val) {
   }
 }
 
+function undoSet(exId, idx) {
+  const ex = getExData(exId);
+  if (!ex) return;
+  ex.sets[idx].completed = false;
+  saveCurrent();
+  render();
+}
+
 function completeSet(exId, idx) {
   const ex = getExData(exId);
   if (!ex) return;
@@ -1252,37 +1260,32 @@ function renderSetRow(ex, set, i) {
       ${bw
         ? `<span class="bw-label">BW</span>`
         : `<div class="input-group">
-            <button class="adj-btn" onclick="adjustWeight('${ex.id}',${i},${-inc})"
-                    ${set.completed ? 'disabled' : ''}>−</button>
+            <button class="adj-btn" onclick="adjustWeight('${ex.id}',${i},${-inc})">−</button>
             <input class="set-input" type="number" inputmode="decimal"
                    data-weight="${ex.id}-${i}"
                    value="${set.weight}" step="${inc}" min="0"
-                   onblur="onWeightBlur('${ex.id}',${i},this.value)"
-                   ${set.completed ? 'disabled' : ''}>
-            <button class="adj-btn" onclick="adjustWeight('${ex.id}',${i},${inc})"
-                    ${set.completed ? 'disabled' : ''}>+</button>
+                   onblur="onWeightBlur('${ex.id}',${i},this.value)">
+            <button class="adj-btn" onclick="adjustWeight('${ex.id}',${i},${inc})">+</button>
           </div>
           <span class="input-unit">kg</span>`
       }
 
       <div class="input-group">
-        <button class="adj-btn" onclick="adjustReps('${ex.id}',${i},-1)"
-                ${set.completed ? 'disabled' : ''}>−</button>
+        <button class="adj-btn" onclick="adjustReps('${ex.id}',${i},-1)">−</button>
         <input class="set-input" type="number" inputmode="numeric"
                data-reps="${ex.id}-${i}"
                value="${set.reps}" min="0"
-               onblur="onRepsBlur('${ex.id}',${i},this.value)"
-               ${set.completed ? 'disabled' : ''}>
-        <button class="adj-btn" onclick="adjustReps('${ex.id}',${i},1)"
-                ${set.completed ? 'disabled' : ''}>+</button>
+               onblur="onRepsBlur('${ex.id}',${i},this.value)">
+        <button class="adj-btn" onclick="adjustReps('${ex.id}',${i},1)">+</button>
       </div>
       <span class="input-unit">${isAMRAP(ex) ? 'reps' : 'reps'}</span>
 
       ${isPR ? '<span class="pr-badge">🏆 PR</span>' : ''}
 
       <button class="complete-btn ${set.completed ? 'done' : ''}"
-              onclick="${set.completed ? '' : `completeSet('${ex.id}',${i})`}"
-              ${set.completed ? 'disabled' : ''}>✓</button>
+              onclick="${set.completed ? `undoSet('${ex.id}',${i})` : `completeSet('${ex.id}',${i})`}">
+        ${set.completed ? '↩' : '✓'}
+      </button>
     </div>`;
 }
 
@@ -1492,22 +1495,22 @@ function renderGuidedSetRow(ex, set, i, currentSetIdx, allSetsDone) {
       ${bw
         ? `<span class="bw-label">BW</span>`
         : `<div class="input-group">
-            <button class="adj-btn" onclick="adjustWeight('${ex.id}',${i},${-inc})" ${set.completed ? 'disabled' : ''}>−</button>
+            <button class="adj-btn" onclick="adjustWeight('${ex.id}',${i},${-inc})">−</button>
             <input class="set-input" type="number" inputmode="decimal"
                    data-weight="${ex.id}-${i}" value="${set.weight}" step="${inc}" min="0"
-                   onblur="onWeightBlur('${ex.id}',${i},this.value)" ${set.completed ? 'disabled' : ''}>
-            <button class="adj-btn" onclick="adjustWeight('${ex.id}',${i},${inc})" ${set.completed ? 'disabled' : ''}>+</button>
+                   onblur="onWeightBlur('${ex.id}',${i},this.value)">
+            <button class="adj-btn" onclick="adjustWeight('${ex.id}',${i},${inc})">+</button>
           </div>`
       }
       <div class="input-group">
-        <button class="adj-btn" onclick="adjustReps('${ex.id}',${i},-1)" ${set.completed ? 'disabled' : ''}>−</button>
+        <button class="adj-btn" onclick="adjustReps('${ex.id}',${i},-1)">−</button>
         <input class="set-input" type="number" inputmode="numeric"
                data-reps="${ex.id}-${i}" value="${set.reps}" min="0"
-               onblur="onRepsBlur('${ex.id}',${i},this.value)" ${set.completed ? 'disabled' : ''}>
-        <button class="adj-btn" onclick="adjustReps('${ex.id}',${i},1)" ${set.completed ? 'disabled' : ''}>+</button>
+               onblur="onRepsBlur('${ex.id}',${i},this.value)">
+        <button class="adj-btn" onclick="adjustReps('${ex.id}',${i},1)">+</button>
       </div>
-      <div class="guided-set-status">
-        ${set.completed ? '<span class="guided-check">✓</span>' : isCurrent ? '<span class="guided-arrow">→</span>' : ''}
+      <div class="guided-set-status" onclick="${set.completed ? `undoSet('${ex.id}',${i})` : ''}">
+        ${set.completed ? '<span class="guided-check" style="cursor:pointer;">↩</span>' : isCurrent ? '<span class="guided-arrow">→</span>' : ''}
       </div>
     </div>`;
 }
