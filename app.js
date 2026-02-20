@@ -23,6 +23,7 @@ const S = {
   scheduleSelected: null, // selected day index in schedule view
   calMonth: undefined,    // calendar month (0-11)
   calYear:  undefined,    // calendar year
+  overrideType: null,     // manual workout type override
 };
 
 // ---- LocalStorage Keys ----
@@ -115,11 +116,42 @@ function fmtDuration(startIso, endIso) {
 }
 
 function getTodayType() {
-  const startDate = new Date(S.program.startDate + 'T12:00:00');
-  const today     = new Date(todayStr() + 'T12:00:00');
-  const days      = Math.round((today - startDate) / 86400000);
-  const cycle     = S.program.cycleDays;
-  return cycle[((days % cycle.length) + cycle.length) % cycle.length];
+  // Session-based: find last completed workout, advance to next in cycle
+  const cycle = S.program.cycleDays;
+  
+  // Check if we already completed something today
+  const todayLogs = S.logs.filter(l => l.date === todayStr());
+  if (todayLogs.length > 0) {
+    // Already trained today — show "done" or next in cycle
+    const lastToday = todayLogs[todayLogs.length - 1];
+    const lastType = lastToday.type;
+    const idx = cycle.indexOf(lastType);
+    if (idx !== -1) {
+      const nextIdx = (idx + 1) % cycle.length;
+      // If next is rest, show rest; otherwise show as "done for today"
+      return cycle[nextIdx] === 'rest' ? 'rest' : '_done';
+    }
+  }
+  
+  // Find last completed workout from any day
+  if (S.logs.length > 0) {
+    const lastLog = S.logs[S.logs.length - 1];
+    const lastType = lastLog.type;
+    const idx = cycle.indexOf(lastType);
+    if (idx !== -1) {
+      const nextIdx = (idx + 1) % cycle.length;
+      return cycle[nextIdx];
+    }
+  }
+  
+  // No logs at all — start at beginning of cycle
+  return cycle[0];
+}
+
+// Override today's type manually
+function overrideTodayType(type) {
+  S.overrideType = type;
+  render();
 }
 
 // ============================================================
@@ -305,6 +337,8 @@ function finishWorkout() {
   archiveCurrentWorkout();
   stopTimer();
   S.expanded = null;
+  S.overrideType = null;
+  S.guided = false;
   showToast('Workout saved! 💪');
   render();
 }
@@ -313,6 +347,7 @@ function abandonWorkout() {
   if (!confirm('Abandon this workout? Progress will be lost.')) return;
   clearCurrent();
   stopTimer();
+  S.overrideType = null;
   S.expanded = null;
   render();
 }
@@ -649,31 +684,54 @@ function updateNavActive() {
 // ============================================================
 function renderToday() {
   const app    = document.getElementById('app');
-  const type   = getTodayType();
+  const rawType = S.overrideType || getTodayType();
+  const type   = rawType;
+
+  // If active workout exists, show it regardless of type
+  if (S.current) {
+    const activeType = S.current.type;
+    const activeWorkout = S.program.workouts[activeType];
+    if (activeWorkout) {
+      if (S.guided) {
+        app.innerHTML = renderGuidedMode(activeType, activeWorkout);
+        return;
+      }
+      // List view of active workout
+      const { done, total, pct } = getProgress();
+      const groups = groupExercises(activeWorkout.exercises);
+      app.innerHTML = renderActiveWorkout(activeType, activeWorkout, done, total, pct, groups);
+      return;
+    }
+  }
+
+  if (type === '_done') {
+    app.innerHTML = renderDoneForToday();
+    return;
+  }
 
   if (type === 'rest') {
     app.innerHTML = renderRestDay();
     return;
   }
 
+  // Run day
+  if (type.startsWith('run-')) {
+    app.innerHTML = renderRunDay(type);
+    return;
+  }
+
   const workout = S.program.workouts[type];
-  const isActive = S.current && S.current.type === type && S.current.date === todayStr();
-
-  if (!isActive) {
-    S.guided = false;
-    app.innerHTML = renderStartScreen(type, workout);
+  if (!workout) {
+    app.innerHTML = renderRestDay();
     return;
   }
 
-  if (S.guided) {
-    app.innerHTML = renderGuidedMode(type, workout);
-    return;
-  }
+  app.innerHTML = renderStartScreen(type, workout);
+  return;
+}
 
-  const { done, total, pct } = getProgress();
-  const groups = groupExercises(workout.exercises);
-
-  app.innerHTML = `
+function renderActiveWorkout(type, workout, done, total, pct, groups) {
+  return `
     <div class="workout-header">
       <div class="workout-day-badge">🏋️ ${type.toUpperCase()}</div>
       <h1 class="workout-title">${workout.name}</h1>
@@ -707,6 +765,70 @@ function renderToday() {
     </div>`;
 }
 
+function renderDoneForToday() {
+  return `
+    <div class="rest-screen">
+      <div class="rest-icon">💪</div>
+      <h2>Done for Today!</h2>
+      <p class="rest-date">${fmtDate(todayStr())}</p>
+      <p style="color:var(--text-muted);text-align:center;padding:0 20px;margin-top:8px;">
+        Great work. Rest up and come back for the next session.
+      </p>
+      <div style="margin-top:20px;">
+        <div style="color:var(--text-dim);font-size:12px;text-align:center;margin-bottom:8px;">Want to do another session?</div>
+        <div class="override-picker">
+          ${['push','pull','legs'].map(t => `
+            <button class="override-btn" onclick="overrideTodayType('${t}'); startWorkout('${t}')">
+              ${{push:'💪',pull:'🦾',legs:'🦵'}[t]} ${t[0].toUpperCase()+t.slice(1)}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderRunDay(type) {
+  const runType = type === 'run-z2' ? 'z2' : 'intervals';
+  const icon = runType === 'z2' ? '🏃' : '⚡';
+  const title = runType === 'z2' ? 'Zone 2 Run' : 'Interval Run';
+  
+  return `
+    <div class="rest-screen">
+      <div class="rest-icon">${icon}</div>
+      <h2>${title}</h2>
+      <p class="rest-date">${fmtDate(todayStr())}</p>
+      
+      <div class="run-day-protocol">
+        ${runType === 'z2' ? `
+          <div class="run-step">🎯 HR target: 110-129 bpm (ceiling 130)</div>
+          <div class="run-step">🏃 Pace: 5.5-6.0 km/h, 2-3% incline</div>
+          <div class="run-step">⏱️ Duration: 30-45 min</div>
+          <div class="run-step">💡 Should be easy — hold a conversation</div>
+        ` : `
+          <div class="run-step">🔥 Warm-up: 10 min easy jog</div>
+          <div class="run-step">⚡ 4 × 4 min @ 85-90% max HR</div>
+          <div class="run-step">🚶 3 min recovery between intervals</div>
+          <div class="run-step">❄️ Cool-down: 5 min easy jog</div>
+        `}
+      </div>
+
+      <button class="btn btn-success" style="max-width:280px;margin:16px auto;" onclick="logRun('${runType}')">
+        ✅ Mark Run Complete
+      </button>
+
+      <div style="margin-top:24px;">
+        <div style="color:var(--text-dim);font-size:12px;text-align:center;margin-bottom:8px;">Rather do weights instead?</div>
+        <div class="override-picker">
+          ${['push','pull','legs'].map(t => `
+            <button class="override-btn" onclick="overrideTodayType('${t}')">
+              ${{push:'💪',pull:'🦾',legs:'🦵'}[t]} ${t[0].toUpperCase()+t.slice(1)}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderStartScreen(type, workout) {
   const icons = { push: '💪', pull: '🦾', legs: '🦵' };
   return `
@@ -717,7 +839,7 @@ function renderStartScreen(type, workout) {
       <div class="start-screen">
         <div class="start-workout-icon">${icons[type] || '🏋️'}</div>
         <h2>${workout.name}</h2>
-        <p>${workout.exercises.length} exercises · ${type === 'push' ? '~60' : type === 'pull' ? '~55' : '~65'} min</p>
+        <p>${workout.exercises.length} exercises · ~30-40 min</p>
         <button class="btn btn-primary" style="max-width:280px;" onclick="startWorkout('${type}')">
           Start Workout
         </button>
@@ -727,6 +849,17 @@ function renderStartScreen(type, workout) {
       </div>
       <div class="section-gap"></div>
       ${groupExercises(workout.exercises).map(g => renderGroupPreview(g)).join('')}
+      
+      <div style="margin-top:20px;">
+        <div style="color:var(--text-dim);font-size:12px;text-align:center;margin-bottom:8px;">Different workout?</div>
+        <div class="override-picker">
+          ${['push','pull','legs'].filter(t => t !== type).map(t => `
+            <button class="override-btn" onclick="overrideTodayType('${t}')">
+              ${{push:'💪',pull:'🦾',legs:'🦵'}[t]} ${t[0].toUpperCase()+t.slice(1)}
+            </button>
+          `).join('')}
+        </div>
+      </div>
     </div>`;
 }
 
@@ -747,47 +880,33 @@ function renderRestDay() {
 }
 
 function renderUpcomingSchedule() {
-  const icons = { push: '💪', pull: '🦾', legs: '🦵', rest: '😴' };
-  const names = { push: 'Push', pull: 'Pull', legs: 'Legs', rest: 'Rest' };
+  const icons = { push: '💪', pull: '🦾', legs: '🦵', rest: '😴', 'run-z2': '🏃', 'run-intervals': '⚡' };
+  const names = { push: 'Push', pull: 'Pull', legs: 'Legs', rest: 'Rest', 'run-z2': 'Zone 2 Run', 'run-intervals': 'Interval Run' };
   const cycle = S.program.cycleDays;
   
-  // Running config from program.json or defaults
-  const runConfig = S.program.running || {};
-  const runsPerCycle = runConfig.runsPerCycle || [0, 2]; // which cycle indices get runs (push=0, legs=2)
-  const runType = runConfig.currentPhase || 'z2'; // 'z2' or 'mixed'
+  // Session-based: find current position in cycle
+  const nextType = getTodayType();
+  let currentPos = 0;
+  if (nextType !== '_done') {
+    const idx = cycle.indexOf(nextType);
+    if (idx !== -1) currentPos = idx;
+  }
   
-  // Build cycle items: strength + runs interleaved
+  // Build items for 2 full cycles
   const items = [];
-  const startDate = new Date(S.program.startDate + 'T12:00:00');
-  const today = new Date(todayStr() + 'T12:00:00');
-  const daysSinceStart = Math.round((today - startDate) / 86400000);
-  const currentCyclePos = ((daysSinceStart % cycle.length) + cycle.length) % cycle.length;
-  
-  // Show 2 full cycles (8 sessions)
   for (let i = 0; i < cycle.length * 2; i++) {
-    const type = cycle[i % cycle.length];
-    const isCurrent = i === currentCyclePos;
-    const isPast = i < currentCyclePos;
+    const cycleIdx = (currentPos + i) % cycle.length;
+    const type = cycle[cycleIdx];
+    const isRun = type.startsWith('run-');
     
     items.push({
-      kind: 'strength',
+      kind: isRun ? 'run' : 'strength',
       type,
-      isCurrent,
-      isPast,
+      runType: isRun ? type.replace('run-', '') : null,
+      isCurrent: i === 0,
+      isPast: false,
       idx: items.length,
     });
-    
-    // Add run after this strength session if applicable
-    if (type !== 'rest' && runsPerCycle.includes(i % cycle.length)) {
-      items.push({
-        kind: 'run',
-        runType: runType === 'mixed' && items.filter(it => it.kind === 'run').length % 3 === 2 ? 'intervals' : 'z2',
-        parentType: type,
-        isCurrent: false,
-        isPast,
-        idx: items.length,
-      });
-    }
   }
   
   const selected = S.scheduleSelected;

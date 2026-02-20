@@ -3,8 +3,11 @@
   "startDate": "2026-02-18",
   "cycleDays": [
     "push",
+    "run-z2",
     "pull",
+    "run-z2",
     "legs",
+    "run-z2",
     "rest"
   ],
   "workouts": {
@@ -248,10 +251,6 @@
     }
   },
   "running": {
-    "runsPerCycle": [
-      0,
-      2
-    ],
     "currentPhase": "z2",
     "z2": {
       "duration": "30-45 min",
