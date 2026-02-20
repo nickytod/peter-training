@@ -204,11 +204,45 @@ function lastExData(exerciseId) {
 
 function lastWeight(exerciseId, programEx) {
   const ex = lastExData(exerciseId);
-  if (ex?.sets?.length) {
-    const done = ex.sets.filter(s => s.completed);
-    if (done.length) return done[done.length - 1].weight;
+  if (!ex?.sets?.length) return programEx.startWeight;
+  
+  const workingSets = ex.sets.filter(s => s.completed && !s.warmup);
+  if (!workingSets.length) return programEx.startWeight;
+  
+  const lastWt = workingSets[workingSets.length - 1].weight;
+  
+  // Auto-progression: if ALL working sets hit target reps → bump weight
+  const allHitTarget = workingSets.every(s => s.reps >= programEx.repsMax);
+  if (allHitTarget && !isBW(programEx)) {
+    const inc = increment(programEx);
+    return lastWt + inc;
   }
-  return programEx.startWeight;
+  
+  return lastWt;
+}
+
+// Get suggested weight with explanation for UI
+function weightSuggestion(exerciseId, programEx) {
+  const ex = lastExData(exerciseId);
+  if (!ex?.sets?.length) return { weight: programEx.startWeight, reason: null };
+  
+  const workingSets = ex.sets.filter(s => s.completed && !s.warmup);
+  if (!workingSets.length) return { weight: programEx.startWeight, reason: null };
+  
+  const lastWt = workingSets[workingSets.length - 1].weight;
+  const allHitTarget = workingSets.every(s => s.reps >= programEx.repsMax);
+  
+  if (allHitTarget) {
+    const inc = increment(programEx);
+    return { weight: lastWt + inc, reason: `↑ +${inc}kg (hit all ${programEx.repsMax} reps last time)` };
+  }
+  
+  const anyMissed = workingSets.some(s => s.reps < programEx.repsMin);
+  if (anyMissed) {
+    return { weight: lastWt, reason: `→ Same weight (missed reps last time — keep grinding)` };
+  }
+  
+  return { weight: lastWt, reason: `→ Same weight (hit ${workingSets.map(s=>s.reps).join('/')} reps — need all ${programEx.repsMax})` };
 }
 
 function getPR(exerciseId) {
@@ -285,14 +319,15 @@ function startWorkout(type) {
     startTime: new Date().toISOString(),
     endTime:   null,
     exercises: workout.exercises.map(ex => {
+      const workingWt = lastWeight(ex.id, ex);
       const warmups = (ex.warmupSets || []).map(ws => ({
-        weight: ws.weight,
+        weight: ws.weight > 0 ? Math.round(workingWt * 0.5 / 2.5) * 2.5 : 0,
         reps: ws.reps,
         completed: false,
         warmup: true,
       }));
       const working = Array.from({ length: ex.sets }, () => ({
-        weight:    lastWeight(ex.id, ex),
+        weight:    workingWt,
         reps:      isAMRAP(ex) ? 0 : ex.repsMax,
         completed: false,
         warmup: false,
@@ -1382,6 +1417,10 @@ function renderGuidedMode(type, workout) {
         </div>
         ${ex.notes ? `<div class="guided-notes">${escHtml(ex.notes)}</div>` : ''}
         ${lastText ? `<div class="guided-last">Last: ${escHtml(lastText)}</div>` : ''}
+        ${(() => {
+          const suggestion = weightSuggestion(ex.id, ex);
+          return suggestion.reason ? `<div class="guided-suggestion">${suggestion.reason}</div>` : '';
+        })()}
       </div>
 
       <!-- Sets -->

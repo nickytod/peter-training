@@ -1695,6 +1695,18 @@ input[type="number"] { -moz-appearance: textfield; }
 }
 
 /* Run day */
+/* Weight suggestion */
+.guided-suggestion {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--success);
+  text-align: center;
+  margin-top: 4px;
+  padding: 4px 10px;
+  background: rgba(48,209,88,0.08);
+  border-radius: 8px;
+}
+
 .run-day-protocol {
   background: var(--bg-card);
   border-radius: var(--radius);
